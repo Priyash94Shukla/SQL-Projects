@@ -23,7 +23,7 @@ An ERD diagram is included to visually represent the database schema and relatio
 ---
 ---
 
-![SQL Queries](amazon_queries.sql)
+**SQL Queries:** [amazon_queries.sql](amazon_queries.sql)
 
 ---
 
