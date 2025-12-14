@@ -27,7 +27,7 @@ An ERD diagram is included to visually represent the database schema and relatio
 
 ---
 
-## **Skilles & Concept Used** 
+## **Skills & Concept Used** 
 - SQL Joins (INNER, LEFT)
 - Aggregate functions (SUM, COUNT, AVG)
 - Window Functions (RANK, DENSE_RANK, LAG)
