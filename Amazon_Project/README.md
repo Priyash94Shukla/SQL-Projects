@@ -173,38 +173,58 @@ Challenge: Include product name, total quantity sold, and total sales value.
 
 ```sql
 --Method-I (Subquery)
-SELECT t1.p_name, (t2.price*t1.total_quantity_sold) AS total_sales_value
-FROM
-(SELECT 
-	p.product_name as p_name,
-	p.product_id, 
-	ROUND(SUM(oi.quantity),2) AS total_quantity_sold
-FROM products AS p
-JOIN order_items AS oi 
-ON p.product_id = oi.product_id
-GROUP BY 1,2) as t1
-JOIN products AS t2 
-ON t1.product_id = t2.product_id
-ORDER BY total_sales_value DESC LIMIT 10;
+SELECT 
+  t1.p_name, 
+  (
+    t2.price * t1.total_quantity_sold
+  ) AS total_sales_value 
+FROM 
+  (
+    SELECT 
+      p.product_name as p_name, 
+      p.product_id, 
+      ROUND(
+        SUM(oi.quantity), 
+        2
+      ) AS total_quantity_sold 
+    FROM 
+      products AS p 
+      JOIN order_items AS oi ON p.product_id = oi.product_id 
+    GROUP BY 
+      1, 
+      2
+  ) as t1 
+  JOIN products AS t2 ON t1.product_id = t2.product_id 
+ORDER BY 
+  total_sales_value DESC 
+LIMIT 
+  10;
 ```
 ```sql
 --Method-II (creating new column) 
-ALTER TABLE order_items
-ADD COLUMN total_sale FLOAT;
+ALTER TABLE 
+  order_items 
+ADD 
+  COLUMN total_sale FLOAT;
+UPDATE 
+  order_items 
+SET 
+  total_sale = quantity * price_per_unit;
+SELECT 
+  p.product_name, 
+  COUNT(o.order_id) AS sale_count, 
+  SUM(oi.total_sale) AS total_sale_value 
+FROM 
+  orders AS o 
+  JOIN order_items AS oi ON o.order_id = oi.order_id 
+  JOIN products AS p ON p.product_id = oi.product_id 
+GROUP BY 
+  1 
+ORDER BY 
+  SUM(oi.total_sale) DESC 
+LIMIT 
+  10;
 
-UPDATE order_items
-SET total_sale = quantity * price_per_unit;
-
-
-SELECT p.product_name, COUNT(o.order_id) AS sale_count, SUM(oi.total_sale) AS total_sale_value 
-FROM orders AS o 
-JOIN order_items AS oi 
-ON o.order_id = oi.order_id
-JOIN products AS p 
-ON p.product_id = oi.product_id
-GROUP BY 1
-ORDER BY SUM(oi.total_sale) DESC 
-LIMIT 10;
 
 ```
 
@@ -214,27 +234,49 @@ Challenge: Include the percentage contribution of each category to total revenue
 
 ```sql
 -- Method-I (With CTE)
-WITH CTE AS (SELECT SUM(total_sale) AS s_t
-FROM order_items)
+WITH CTE AS (
+  SELECT 
+    SUM(total_sale) AS s_t 
+  FROM 
+    order_items
+) 
+SELECT 
+  c.category_name, 
+  SUM(oi.total_sale) AS category_sale, 
+  (
+    SUM(oi.total_sale)/ t.s_t
+  ) * 100 AS percentage_contribution 
+FROM 
+  order_items AS oi 
+  JOIN products AS p ON oi.product_id = p.product_id 
+  JOIN category AS c ON p.category_id = c.category_id CROSS 
+  JOIN CTE AS t 
+GROUP BY 
+  c.category_name, 
+  t.s_t;
 
-SELECT c.category_name, SUM(oi.total_sale) AS category_sale, (SUM(oi.total_sale)/t.s_t) * 100 AS percentage_contribution
-FROM order_items AS oi 
-JOIN products AS p
-ON oi.product_id = p.product_id
-JOIN category AS c 
-ON p.category_id = c.category_id
-CROSS JOIN CTE AS t
-GROUP BY c.category_name,t.s_t;
+```
 
+```sql
 -- Method-II (With Subquery)
 
-SELECT c.category_name, SUM(oi.total_sale) AS category_sale, (SUM(oi.total_sale)/(SELECT SUM(total_sale) FROM order_items)) * 100 AS percentage_contribution
-FROM order_items AS oi 
-JOIN products AS p 
-ON oi.product_id = p.product_id
-JOIN category AS c
-ON p.category_id = c.category_id
-GROUP BY 1;
+SELECT 
+  c.category_name, 
+  SUM(oi.total_sale) AS category_sale, 
+  (
+    SUM(oi.total_sale)/(
+      SELECT 
+        SUM(total_sale) 
+      FROM 
+        order_items
+    )
+  ) * 100 AS percentage_contribution 
+FROM 
+  order_items AS oi 
+  JOIN products AS p ON oi.product_id = p.product_id 
+  JOIN category AS c ON p.category_id = c.category_id 
+GROUP BY 
+  1;
 ```
 
 3. Average Order Value (AOV)
@@ -243,39 +285,59 @@ Challenge: Include only customers with more than 5 orders.
 
 ```sql
 --Method-I (Using simple join)
-SELECT c.customer_id, c.first_name, c.last_name,
-SUM(oi.total_sale)/COUNT(o.order_id) AS AOV,
-COUNT(o.order_id) AS order_counts
-FROM customers AS c
-JOIN orders AS o 
-ON c.customer_id = o.customer_id
-JOIN order_items AS oi 
-ON o.order_id = oi.order_id
-GROUP BY 1,2,3
-HAVING COUNT(o.order_id) > 5
-ORDER BY 4 DESC;
+SELECT 
+  c.customer_id, 
+  c.first_name, 
+  c.last_name, 
+  SUM(oi.total_sale)/ COUNT(o.order_id) AS AOV, 
+  COUNT(o.order_id) AS order_counts 
+FROM 
+  customers AS c 
+  JOIN orders AS o ON c.customer_id = o.customer_id 
+  JOIN order_items AS oi ON o.order_id = oi.order_id 
+GROUP BY 
+  1, 
+  2, 
+  3 
+HAVING 
+  COUNT(o.order_id) > 5 
+ORDER BY 
+  4 DESC;
 
+```
+```sql
 -- Method-II (Using Common Table Expression)
 
 WITH no_orders AS(
-SELECT c.customer_id, COUNT(o.customer_id) AS o_counts
-FROM customers AS c
-JOIN orders AS o 
-ON c.customer_id = o.customer_id
-GROUP BY 1)
+SELECT 
+  c.customer_id, 
+  COUNT(o.customer_id) AS o_counts 
+FROM 
+  customers AS c 
+  JOIN orders AS o ON c.customer_id = o.customer_id 
+GROUP BY 
+  1
+) 
+SELECT 
+  c.customer_id, 
+  c.first_name, 
+  c.last_name, 
+  SUM(oi.total_sale)/(no_orders.o_counts) AS AOV 
+FROM 
+  customers AS c 
+  JOIN orders AS o ON c.customer_id = o.customer_id 
+  JOIN order_items AS oi ON o.order_id = oi.order_id 
+  JOIN no_orders ON c.customer_id = no_orders.customer_id 
+GROUP BY 
+  1, 
+  2, 
+  3, 
+  no_orders.o_counts 
+HAVING 
+  no_orders.o_counts > 5 
+ORDER BY 
+  4 DESC;
 
-SELECT c.customer_id, c.first_name, c.last_name,
-SUM(oi.total_sale)/(no_orders.o_counts) AS AOV
-FROM customers AS c
-JOIN orders AS o 
-ON c.customer_id = o.customer_id
-JOIN order_items AS oi
-ON o.order_id = oi.order_id
-JOIN no_orders 
-ON c.customer_id = no_orders.customer_id
-GROUP BY 1,2,3,no_orders.o_counts
-HAVING no_orders.o_counts > 5
-ORDER BY 4 DESC;
 ```
 
 4. Monthly Sales Trend
@@ -285,25 +347,51 @@ Challenge: Display the sales trend, grouping by month, return current_month sale
 ```sql
 -- Note :- Since we are in 2025 and data's latest date is Jul-2024. We we cannot use interval function directly
 WITH max_date AS (
-	SELECT MAX(order_date) AS max_dt
-	FROM orders
-)
+  SELECT 
+    MAX(order_date) AS max_dt 
+  FROM 
+    orders
+) 
 SELECT 
-	order_year, order_month,
-	monthly_sale,
-	LAG(monthly_sale) OVER(ORDER BY order_year, order_month)
+  order_year, 
+  order_month, 
+  monthly_sale, 
+  LAG(monthly_sale) OVER(
+    ORDER BY 
+      order_year, 
+      order_month
+  ) 
 FROM 
-(SELECT 
-	EXTRACT(YEAR FROM o.order_date) AS order_year,
-	EXTRACT(MONTH FROM o.order_date) AS order_month,
-	ROUND(SUM(oi.total_sale)::numeric,2) AS monthly_sale
-FROM orders AS o 
-JOIN order_items AS oi
-ON o.order_id = oi.order_id
-JOIN max_date AS md ON TRUE
-WHERE o.order_date >= md.max_dt - INTERVAL '12 MONTHS'
-GROUP BY 1,2
-ORDER BY 1,2);
+  (
+    SELECT 
+      EXTRACT(
+        YEAR 
+        FROM 
+          o.order_date
+      ) AS order_year, 
+      EXTRACT(
+        MONTH 
+        FROM 
+          o.order_date
+      ) AS order_month, 
+      ROUND(
+        SUM(oi.total_sale):: numeric, 
+        2
+      ) AS monthly_sale 
+    FROM 
+      orders AS o 
+      JOIN order_items AS oi ON o.order_id = oi.order_id 
+      JOIN max_date AS md ON TRUE 
+    WHERE 
+      o.order_date >= md.max_dt - INTERVAL '12 MONTHS' 
+    GROUP BY 
+      1, 
+      2 
+    ORDER BY 
+      1, 
+      2
+  );
+
 ```
 
 
@@ -312,23 +400,29 @@ Find customers who have registered but never placed an order.
 Challenge: List customer details and the time since their registration.
 
 ```sql
-Approach 1
-SELECT *
-	-- reg_date - CURRENT_DATE
-FROM customers
-WHERE customer_id NOT IN (SELECT 
-					DISTINCT customer_id
-				FROM orders
-				);
+-- Method I - Using Join
+SELECT 
+  DISTINCT t1.customer_id 
+FROM 
+  customers AS t1 
+  LEFT JOIN orders AS t2 ON t1.customer_id = t2.customer_id 
+WHERE 
+  t2.customer_id IS NULL;
+
 ```
 ```sql
--- Approach 2
-SELECT *
-FROM customers as c
-LEFT JOIN
-orders as o
-ON o.customer_id = c.customer_id
-WHERE o.customer_id IS NULL
+SELECT 
+  DISTINCT customer_id 
+FROM 
+  customers 
+WHERE 
+  customer_id NOT IN (
+    SELECT 
+      DISTINCT customer_id 
+    FROM 
+      orders
+  );
+
 ```
 
 6. Least-Selling Categories by State
@@ -336,6 +430,7 @@ Identify the least-selling product category for each state.
 Challenge: Include the total sales for that category within each state.
 
 ```sql
+-- Method-II (Using CTE)
 WITH ranking_table
 AS
 (
@@ -364,7 +459,44 @@ SELECT
 FROM ranking_table
 WHERE rank = 1
 ```
-
+```sql
+-- Method-II(Using Subquery)
+SELECT 
+  * 
+FROM 
+  (
+    SELECT 
+      *, 
+      RANK() OVER(
+        PARTITION BY state 
+        ORDER BY 
+          total_sale
+      ) AS rank_over_category_sale 
+    FROM 
+      (
+        SELECT 
+          c.state, 
+          ca.category_name, 
+          ROUND(
+            SUM(oi.total_sale):: numeric, 
+            2
+          ) AS total_sale 
+        FROM 
+          category AS ca 
+          JOIN products AS p ON ca.category_id = p.category_id 
+          JOIN order_items AS oi ON p.product_id = oi.product_id 
+          JOIN orders AS o ON oi.order_id = o.order_id 
+          JOIN customers AS c ON o.customer_id = c.customer_id 
+        GROUP BY 
+          1, 
+          2 
+        ORDER BY 
+          1
+      )
+  ) 
+WHERE 
+  rank_over_category_sale = 1;
+```
 
 7. Customer Lifetime Value (CLTV)
 Calculate the total value of orders placed by each customer over their lifetime.
@@ -541,7 +673,29 @@ GROUP BY 1, 2
 ORDER BY 5 DESC
 ```
 
-14. Inactive Sellers
+14. Orders Pending Shipment
+Find orders that have been paid but are still pending shipment.
+Challenge: Include order details, payment date, and customer information.
+
+```sql
+SELECT 
+  c.*, 
+  o.*, 
+  p.payment_date, 
+  p.payment_status, 
+  sh.delivery_status 
+FROM 
+  orders AS o 
+  JOIN shippings AS sh ON o.order_id = sh.order_id 
+  JOIN payments AS p ON o.order_id = p.order_id 
+  JOIN customers AS c ON o.customer_id = c.customer_id 
+WHERE 
+  p.payment_status = 'Payment Successed' 
+  AND sh.delivery_status = 'Shipped';
+
+```
+
+15. Inactive Sellers
 Identify sellers who haven’t made any sales in the last 6 months.
 Challenge: Show the last sale date and total sales from those sellers.
 
@@ -566,7 +720,7 @@ GROUP BY 1
 ```
 
 
-15. IDENTITY customers into returning or new
+16. IDENTITY customers into returning or new
 if the customer has done more than 5 return categorize them as returning otherwise new
 Challenge: List customers id, name, total orders, total returns
 
@@ -594,7 +748,7 @@ GROUP BY 1)
 ```
 
 
-16. Top 5 Customers by Orders in Each State
+17. Top 5 Customers by Orders in Each State
 Identify the top 5 customers with the highest number of orders for each state.
 Challenge: Include the number of orders and total sales for each customer.
 ```sql
@@ -618,7 +772,7 @@ GROUP BY 1, 2
 WHERE rank <=5
 ```
 
-17. Revenue by Shipping Provider
+18. Revenue by Shipping Provider
 Calculate the total revenue handled by each shipping provider.
 Challenge: Include the total number of orders handled and the average delivery time for each provider.
 
@@ -639,7 +793,7 @@ s.order_id = o.order_id
 GROUP BY 1
 ```
 
-18. Top 10 product with highest decreasing revenue ratio compare to last year(2022) and current_year(2023)
+19. Top 10 product with highest decreasing revenue ratio compare to last year(2022) and current_year(2023)
 Challenge: Return product_id, product_name, category_name, 2022 revenue and 2023 revenue decrease ratio at end Round the result
 Note: Decrease ratio = cr-ls/ls* 100 (cs = current_year ls=last_year)
 
@@ -699,7 +853,7 @@ LIMIT 10
 ```
 
 
-19. Final Task: Stored Procedure
+20. Final Task: Stored Procedure
 Create a stored procedure that, when a product is sold, performs the following actions:
 Inserts a new sales record into the orders and order_items tables.
 Updates the inventory table to reduce the stock based on the product and quantity purchased.
@@ -800,7 +954,3 @@ By completing this project, I have gained a deeper understanding of how SQL can 
 
 ---
 
-### **Entity Relationship Diagram (ERD)**
-![ERD](https://github.com/najirh/amazon_usa_project5/blob/main/erd.png)
-
----
