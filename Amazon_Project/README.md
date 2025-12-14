@@ -186,7 +186,8 @@ GROUP BY 1,2) as t1
 JOIN products AS t2 
 ON t1.product_id = t2.product_id
 ORDER BY total_sales_value DESC LIMIT 10;
-
+```
+```sql
 --Method-II (creating new column) 
 ALTER TABLE order_items
 ADD COLUMN total_sale FLOAT;
