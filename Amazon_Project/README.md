@@ -16,7 +16,7 @@ An ERD diagram is included to visually represent the database schema and relatio
 
 ---
 
-![ERD Diagram](Amazon_Project/erd2.png)
+![ERD Diagram](erd2.png)
 
 ## **Database Setup & Design**
 
