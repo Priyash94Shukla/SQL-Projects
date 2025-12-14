@@ -21,6 +21,12 @@ An ERD diagram is included to visually represent the database schema and relatio
 ![ERD Diagram](erd2.png)
 
 ---
+---
+
+![SQL Queries](amazon_queries.sql)
+
+---
+
 ## **Skilles & Concept Used** 
 - SQL Joins (INNER, LEFT)
 - Aggregate functions (SUM, COUNT, AVG)
